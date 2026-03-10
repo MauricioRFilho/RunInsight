@@ -1,0 +1,20 @@
+{
+  "name": "runinsight",
+  "version": "1.0.0",
+  "description": "RunInsight é uma plataforma de análise de treinos de corrida focada em atletas de endurance.   O sistema permite importar atividades de corrida e gerar métricas de performance, evolução de treinamento e alertas de risco de lesão.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MauricioRFilho/RunInsight.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/MauricioRFilho/RunInsight/issues"
+  },
+  "homepage": "https://github.com/MauricioRFilho/RunInsight#readme"
+}
