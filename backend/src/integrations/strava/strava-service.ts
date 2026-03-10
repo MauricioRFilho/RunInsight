@@ -85,4 +85,17 @@ export class StravaService {
 
     return response.data;
   }
+
+  /**
+   * Fetches activities from Strava searching by Strava ID (owner_id from webhook).
+   */
+  static async fetchActivitiesByStravaId(stravaId: string) {
+    const user = await prisma.user.findUnique({
+      where: { stravaId },
+    });
+
+    if (!user) throw new Error(`User with Strava ID ${stravaId} not found`);
+
+    return this.fetchActivities(user.id);
+  }
 }

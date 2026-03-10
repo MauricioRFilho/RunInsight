@@ -1,4 +1,5 @@
 import prisma from '@/models/prisma';
+import { GamificationService } from './gamification-service';
 
 export class ActivityService {
   /**
@@ -34,6 +35,30 @@ export class ActivityService {
       });
     }
 
+    // Trigger Gamification updates in background
+    // We don't await this to keep the response fast
+    GamificationService.checkAndAward(userId).catch((err) => {
+      console.error('[ActivityService] Error awarding achievements:', err.message);
+    });
+
     return activitiesData.length;
+  }
+
+  static async saveStravaActivitiesByStravaId(stravaId: string, stravaActivities: any[]) {
+    const user = await prisma.user.findUnique({
+      where: { stravaId },
+    });
+
+    if (!user) throw new Error(`User with Strava ID ${stravaId} not found`);
+
+    return this.saveStravaActivities(user.id, stravaActivities);
+  }
+
+  static async getRecentActivities(userId: string, limit: number = 5) {
+    return prisma.activity.findMany({
+      where: { userId },
+      orderBy: { startDate: 'desc' },
+      take: limit,
+    });
   }
 }

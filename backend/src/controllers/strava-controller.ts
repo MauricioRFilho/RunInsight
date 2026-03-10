@@ -59,4 +59,23 @@ export class StravaController {
       res.status(500).json({ error: 'Failed to sync activities' });
     }
   }
+
+  /**
+   * GET /activities/:userId
+   */
+  static async getActivities(req: Request, res: Response) {
+    const { userId } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is missing' });
+    }
+
+    try {
+      const activities = await ActivityService.getRecentActivities(userId as string);
+      res.json(activities);
+    } catch (error: any) {
+      console.error('[StravaController] Error fetching activities:', error.message);
+      res.status(500).json({ error: 'Failed to fetch activities' });
+    }
+  }
 }

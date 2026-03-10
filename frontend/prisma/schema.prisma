@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  name          String?
+  stravaId      String?        @unique
+  accessToken   String?
+  refreshToken  String?
+  expiresAt     Int?
+  activities    Activity[]
+  trainingPlans TrainingPlan[]
+  achievements  Achievement[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Activity {
+  id                 String   @id @default(uuid())
+  user               User     @relation(fields: [userId], references: [id])
+  userId             String
+  stravaId           String?  @unique
+  name               String
+  distance           Float    // in meters
+  movingTime         Int      // in seconds
+  elapsedTime        Int      // in seconds
+  totalElevationGain Float
+  type               String   // e.g., 'Run'
+  startDate          DateTime
+  averageSpeed       Float    // in meters per second
+  maxSpeed           Float
+  averageHeartRate   Float?
+  maxHeartRate       Float?
+  polyline           String?  @db.Text
+  startLatLng        String?  // stored as "lat,lng"
+  endLatLng          String?
+  createdAt          DateTime @default(now())
+}
+
+model TrainingPlan {
+  id             String   @id @default(uuid())
+  user           User     @relation(fields: [userId], references: [id])
+  userId         String
+  type           String   // e.g., 'Easy Run', 'Long Run'
+  targetDistance Float    // in meters
+  targetPace     String?  // e.g., "5:30/km"
+  scheduledFor   DateTime
+  isCompleted    Boolean  @default(false)
+  createdAt      DateTime @default(now())
+}
+
+model Achievement {
+  id          String   @id @default(uuid())
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String
+  type        String   // e.g., 'Streak', 'Volume'
+  name        String
+  description String?
+  dateEarned  DateTime @default(now())
+}
