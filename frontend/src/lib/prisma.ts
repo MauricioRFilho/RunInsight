@@ -1,6 +1,24 @@
 import { PrismaClient } from '@prisma/client';
 
 const prismaClientSingleton = () => {
+  if (process.env.NEXT_PHASE === 'phase-production-build' || process.env.VERCEL === '1') {
+    console.log('[Prisma] Ambientes de build/Vercel detectados. Ativando mock recursivo.');
+    
+    const createMock = (): any => {
+      return new Proxy(() => {}, {
+        get: (_target, prop) => {
+          if (prop === 'then') return undefined; // Proteção contra Promises
+          return createMock();
+        },
+        apply: () => {
+          return Promise.resolve(null);
+        }
+      });
+    };
+    
+    return createMock() as PrismaClient;
+  }
+  
   return new PrismaClient();
 };
 

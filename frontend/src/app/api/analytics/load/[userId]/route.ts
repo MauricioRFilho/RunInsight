@@ -1,10 +1,10 @@
-import { StatsService } from '@/services/stats-service';
-
 export const dynamic = 'force-dynamic';
+
+import { NextRequest, NextResponse } from 'next/server';
+import { ActivityService } from '@/services/activity-service';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ userId: string }> }) {
   const { userId } = await params;
-
   if (!userId) {
     return NextResponse.json({ error: 'User ID is missing' }, { status: 400 });
   }
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     previousWeekStart.setDate(currentWeekStart.getDate() - 7);
 
     const activities = await ActivityService.getRecentActivities(userId, 50);
-
+    
     const currentWeekActivities = activities.filter((a: any) => new Date(a.startDate) >= currentWeekStart);
     const previousWeekActivities = activities.filter((a: any) => {
       const d = new Date(a.startDate);

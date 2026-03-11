@@ -1,13 +1,13 @@
-import { StatsService } from '@/services/stats-service';
-
 export const dynamic = 'force-dynamic';
+
+import { NextRequest, NextResponse } from 'next/server';
+import { StatsService } from '@/services/stats-service';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ userId: string }> }
 ) {
   const { userId } = await params;
-
   if (!userId) {
     return NextResponse.json({ error: 'User ID is missing' }, { status: 400 });
   }
@@ -17,6 +17,6 @@ export async function GET(
     return NextResponse.json(stats);
   } catch (error: any) {
     console.error('[API Stats] Error:', error.message);
-    return NextResponse.json({ error: 'Failed to fetch yearly stats' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch stats' }, { status: 500 });
   }
 }

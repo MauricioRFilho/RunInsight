@@ -1,17 +1,16 @@
-import { PlanService } from '@/services/plan-service';
-
 export const dynamic = 'force-dynamic';
+
+import { NextRequest, NextResponse } from 'next/server';
+import { PlanService } from '@/services/plan-service';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ userId: string }> }
 ) {
   const { userId } = await params;
-
   if (!userId) {
     return NextResponse.json({ error: 'User ID is missing' }, { status: 400 });
   }
-
   try {
     const score = await PlanService.getAdherenceScore(userId);
     return NextResponse.json({ score });

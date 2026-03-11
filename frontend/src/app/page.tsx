@@ -1,5 +1,5 @@
 'use client';
-
+export const dynamic = 'force-dynamic';
 import { useState, useEffect } from 'react';
 import { Activity, Award, RefreshCw, Zap, TrendingUp, ShieldAlert, LogIn, LogOut, Flame, Share2, Calendar, Plus, Bot, Trophy } from 'lucide-react';
 import { WeeklyLoadChart } from '@/components/WeeklyLoadChart';
