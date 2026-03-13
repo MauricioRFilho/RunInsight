@@ -71,8 +71,8 @@ const authHandler = NextAuth({
               accessToken: account.access_token,
               refreshToken: account.refresh_token,
               expiresAt: account.expires_at,
-              name: user.name || dbUser?.name,
-              email: user.email || undefined, // Somente atualiza se houver email
+              name: user.name || undefined, // Somente atualiza se houver nome
+              email: user.email || undefined,
             },
             create: {
               stravaId: stravaId,
