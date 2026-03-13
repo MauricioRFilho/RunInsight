@@ -18,6 +18,7 @@ const handler = NextAuth({
         },
       },
     }),
+    /*
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
@@ -56,9 +57,11 @@ const handler = NextAuth({
         };
       }
     }),
+    */
   ],
   callbacks: {
     async signIn({ user, account }: any) {
+      /*
       // Logic to conditionally skip DB call during build if Prisma is mocked
       if (account?.provider === 'strava' && user.email) {
         try {
@@ -85,6 +88,7 @@ const handler = NextAuth({
           console.error('NextAuth: Error in signIn callback:', error);
         }
       }
+      */
       return true;
     },
     async jwt({ token, user, account }: any) {
@@ -101,9 +105,11 @@ const handler = NextAuth({
       return token;
     },
     async session({ session, token }: any) {
-      session.user.id = token.id;
-      session.accessToken = token.accessToken;
-      session.stravaId = token.stravaId;
+      if (session.user) {
+        session.user.id = token.id;
+        session.accessToken = token.accessToken;
+        session.stravaId = token.stravaId;
+      }
       return session;
     },
   },
