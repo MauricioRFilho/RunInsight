@@ -8,8 +8,8 @@ export async function GET(
   { params }: { params: Promise<{ userId: string }> }
 ) {
   const { userId } = await params;
-  if (!userId) {
-    return NextResponse.json({ error: 'User ID is missing' }, { status: 400 });
+  if (!userId || userId === 'default-user-id') {
+    return NextResponse.json({ error: 'Valid User ID is required' }, { status: 400 });
   }
 
   try {

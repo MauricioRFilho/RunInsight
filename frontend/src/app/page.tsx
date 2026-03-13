@@ -29,7 +29,7 @@ export default function Dashboard() {
   const [isTransparent, setIsTransparent] = useState(false);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
 
-  const userId = session?.user?.email || 'default-user-id';
+  const userId = session?.user?.id || session?.user?.email || 'default-user-id';
 
   useEffect(() => {
     if (status === 'authenticated') {

@@ -43,3 +43,32 @@ for root, dirs, files in os.walk('src/app'):
     for file in files:
         if file in ['page.tsx', 'layout.tsx', 'route.ts']:
             fix_file(os.path.join(root, file))
+
+# New logic for API routes
+def repair_file(filepath):
+    changed = False
+    with open(filepath, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    if '!userId' in content and 'default-user-id' not in content:
+        content = content.replace('!userId', '!userId || userId === "default-user-id"')
+        # Also update the message if needed
+        content = content.replace("'User ID is missing'", "'Valid User ID is required'")
+        content = content.replace('"User ID is missing"', '"Valid User ID is required"')
+        changed = True
+
+    if changed:
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(content)
+        print(f"Repaired: {filepath}")
+    return changed
+
+def main():
+    api_path = os.path.join(os.getcwd(), 'src', 'app', 'api')
+    for root, dirs, files in os.walk(api_path):
+        for file in files:
+            if file.endswith('.ts'):
+                repair_file(os.path.join(root, file))
+
+if __name__ == "__main__":
+    main()

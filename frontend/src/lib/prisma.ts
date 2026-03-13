@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 
 const prismaClientSingleton = () => {
-  if (process.env.NEXT_PHASE === 'phase-production-build' || process.env.VERCEL === '1') {
+  if (process.env.NEXT_PHASE === 'phase-production-build') {
     console.log('[Prisma] Ambientes de build/Vercel detectados. Ativando mock recursivo.');
     
     const createMock = (): any => {

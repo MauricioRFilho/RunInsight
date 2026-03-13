@@ -36,9 +36,21 @@ export class ActivityService {
     }
 
     // Trigger Gamification updates in background
-    // We don't await this to keep the response fast
     GamificationService.checkAndAward(userId).catch((err) => {
       console.error('[ActivityService] Error awarding achievements:', err.message);
+    });
+
+    // Ensure we have the internal UUID if an email was provided
+    let internalUserId = userId;
+    if (userId.includes('@')) {
+      const user = await prisma.user.findUnique({ where: { email: userId } });
+      if (user) internalUserId = user.id;
+    }
+
+    // Update lastSyncedAt
+    await prisma.user.update({
+      where: { id: internalUserId },
+      data: { lastSyncedAt: new Date() },
     });
 
     return activitiesData.length;
