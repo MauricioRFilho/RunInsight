@@ -59,33 +59,56 @@ const authHandler = NextAuth({
   ],
   callbacks: {
     async signIn({ user, account }: any) {
-      if (account?.provider === 'strava' && user.email) {
+      if (account?.provider === 'strava') {
+        const stravaId = account.providerAccountId;
+        console.log(`[NextAuth] Strava sign-in attempt for StravaID: ${stravaId} (Email: ${user.email || 'not provided'})`);
+        
         try {
+          // Use StravaID as primary lookup for Strava provider
           const dbUser = await prisma.user.upsert({
-            where: { email: user.email },
+            where: { stravaId: stravaId },
             update: {
-              stravaId: account.providerAccountId,
               accessToken: account.access_token,
               refreshToken: account.refresh_token,
               expiresAt: account.expires_at,
-              name: user.name,
+              name: user.name || dbUser?.name,
+              email: user.email || undefined, // Somente atualiza se houver email
             },
             create: {
-              email: user.email,
-              stravaId: account.providerAccountId,
+              stravaId: stravaId,
+              email: user.email || null,
               accessToken: account.access_token,
               refreshToken: account.refresh_token,
               expiresAt: account.expires_at,
-              name: user.name,
+              name: user.name || 'Strava User',
             },
           });
-          // Garantir que o ID interno seja passado para o JWT/Session
+          
           user.id = dbUser.id;
           user.stravaId = dbUser.stravaId;
-          console.log(`[NextAuth] User ${user.email} successfully mapped to DB ID: ${user.id}`);
+          console.log(`[NextAuth] Success! StravaID ${stravaId} mapped to DB ID: ${dbUser.id}`);
         } catch (error: any) {
-          console.error(`[NextAuth Error] Critical failure in signIn callback for ${user.email}:`, error.message);
-          if (error.stack) console.error(error.stack);
+          console.error(`[NextAuth Error] Upsert failed for StravaID ${stravaId}:`, error.message);
+          
+          // Fallback if upsert by stravaId fails (e.g. email conflict)
+          if (user.email) {
+            try {
+              console.log(`[NextAuth] Retrying mapping via email: ${user.email}`);
+              const dbUserEmail = await prisma.user.update({
+                where: { email: user.email },
+                data: {
+                  stravaId: stravaId,
+                  accessToken: account.access_token,
+                  refreshToken: account.refresh_token,
+                  expiresAt: account.expires_at,
+                }
+              });
+              user.id = dbUserEmail.id;
+              user.stravaId = dbUserEmail.stravaId;
+            } catch (e2: any) {
+              console.error(`[NextAuth Error] Email fallback also failed:`, e2.message);
+            }
+          }
         }
       }
       return true;
