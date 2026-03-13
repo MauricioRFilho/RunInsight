@@ -3,8 +3,11 @@ import { hash } from 'bcryptjs';
 import prisma from '@/lib/prisma';
 
 export async function POST(request: Request) {
+  let userEmail = 'unknown';
   try {
-    const { name, email, username, password } = await request.json();
+    const body = await request.json();
+    userEmail = body.email;
+    const { name, email, username, password } = body;
 
     if (!email || !password || !name) {
       return NextResponse.json(
@@ -49,7 +52,8 @@ export async function POST(request: Request) {
       },
     });
   } catch (error: any) {
-    console.error('[Signup Error]:', error);
+    console.error(`[Signup Error] Failed to create user ${userEmail}:`, error.message);
+    if (error.stack) console.error(error.stack);
     return NextResponse.json(
       { error: 'Erro ao criar usuário. Tente novamente.' },
       { status: 500 }

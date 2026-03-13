@@ -16,7 +16,7 @@ export async function GET(
     const feedback = await CoachService.getCoachFeedback(userId);
     return NextResponse.json(feedback);
   } catch (error: any) {
-    console.error('[API Coach Feedback] Error:', error.message);
+    console.error(`[API Coach Feedback] Error for user ${userId}:`, error.message);
     return NextResponse.json({ error: 'Failed to fetch coach feedback' }, { status: 500 });
   }
 }

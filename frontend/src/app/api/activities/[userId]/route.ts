@@ -16,7 +16,7 @@ export async function GET(
     const activities = await ActivityService.getRecentActivities(userId, 10);
     return NextResponse.json(activities);
   } catch (error: any) {
-    console.error('[API Activities] Error:', error.message);
+    console.error(`[API Activities] Error fetching activities for user ${userId}:`, error.message);
     return NextResponse.json({ error: 'Failed to fetch activities' }, { status: 500 });
-}
+  }
 }

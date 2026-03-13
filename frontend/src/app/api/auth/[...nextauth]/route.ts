@@ -82,9 +82,10 @@ const authHandler = NextAuth({
           // Garantir que o ID interno seja passado para o JWT/Session
           user.id = dbUser.id;
           user.stravaId = dbUser.stravaId;
-          console.log('[NextAuth] User mapped to DB ID:', user.id);
+          console.log(`[NextAuth] User ${user.email} successfully mapped to DB ID: ${user.id}`);
         } catch (error: any) {
-          console.error('NextAuth: Error in signIn callback:', error.message);
+          console.error(`[NextAuth Error] Critical failure in signIn callback for ${user.email}:`, error.message);
+          if (error.stack) console.error(error.stack);
         }
       }
       return true;
@@ -130,7 +131,8 @@ const handler = async (req: any, res: any) => {
   try {
     return await authHandler(req, res);
   } catch (error: any) {
-    console.error('CRITICAL NEXTAUTH ERROR:', error);
+    console.error('[NextAuth Critical] Unhandled exception in handler:', error.message);
+    if (error.stack) console.error(error.stack);
     return new Response(JSON.stringify({ 
       error: 'Internal Server Error', 
       message: error.message,

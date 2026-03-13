@@ -15,7 +15,7 @@ export async function GET(
     const data = await GamificationService.getGamificationData(userId);
     return NextResponse.json(data);
   } catch (error: any) {
-    console.error('[API Gamification] Error:', error.message);
+    console.error(`[API Gamification] Error fetching data for user ${userId}:`, error.message);
     return NextResponse.json({ error: 'Failed to fetch gamification data' }, { status: 500 });
-}
+  }
 }

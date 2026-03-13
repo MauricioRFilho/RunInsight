@@ -16,7 +16,7 @@ export async function GET(
     const plans = await PlanService.getPlans(userId);
     return NextResponse.json(plans);
   } catch (error: any) {
-    console.error('[API Plans GET] Error:', error.message);
+    console.error(`[API Plans GET] Error fetching plans for user ${userId}:`, error.message);
     return NextResponse.json({ error: 'Failed to fetch plans' }, { status: 500 });
   }
 }
@@ -31,7 +31,7 @@ export async function POST(
     const plan = await PlanService.createPlan(userId, body);
     return NextResponse.json(plan);
   } catch (error: any) {
-    console.error('[API Plans POST] Error:', error.message);
+    console.error(`[API Plans POST] Error creating plan for user ${userId}:`, error.message);
     return NextResponse.json({ error: 'Failed to create plan' }, { status: 500 });
   }
 }

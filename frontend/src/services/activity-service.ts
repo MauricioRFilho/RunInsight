@@ -28,11 +28,15 @@ export class ActivityService {
     // Using createMany or individual creates depending on DB support and duplicates.
     // For MVP, we'll do individual creates to handle existing stravaIds gracefully or use connectOrCreate.
     for (const data of activitiesData) {
-      await prisma.activity.upsert({
-        where: { stravaId: data.stravaId },
-        update: data,
-        create: data,
-      });
+      try {
+        await prisma.activity.upsert({
+          where: { stravaId: data.stravaId },
+          update: data,
+          create: data,
+        });
+      } catch (error: any) {
+        console.error(`[ActivityService] Error upserting activity ${data.stravaId}:`, error.message);
+      }
     }
 
     // Trigger Gamification updates in background

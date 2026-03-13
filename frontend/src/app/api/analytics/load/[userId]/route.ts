@@ -42,7 +42,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       increasePercentage: Math.round(increasePercentage),
     });
   } catch (error: any) {
-    console.error('[API Load Analysis] Error:', error.message);
+    console.error(`[API Load Analysis] Error for user ${userId}:`, error.message);
     return NextResponse.json({ error: 'Failed to fetch load analysis' }, { status: 500 });
   }
 }

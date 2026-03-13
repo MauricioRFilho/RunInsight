@@ -16,7 +16,7 @@ export async function GET(
     const stats = await StatsService.getYearlyStats(userId);
     return NextResponse.json(stats);
   } catch (error: any) {
-    console.error('[API Stats] Error:', error.message);
+    console.error(`[API Stats] Error fetching yearly stats for user ${userId}:`, error.message);
     return NextResponse.json({ error: 'Failed to fetch stats' }, { status: 500 });
   }
 }

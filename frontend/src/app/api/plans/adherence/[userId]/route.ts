@@ -15,7 +15,7 @@ export async function GET(
     const score = await PlanService.getAdherenceScore(userId);
     return NextResponse.json({ score });
   } catch (error: any) {
-    console.error('[API Adherence] Error:', error.message);
+    console.error(`[API Adherence] Error for user ${userId}:`, error.message);
     return NextResponse.json({ error: 'Failed to fetch adherence score' }, { status: 500 });
   }
 }
