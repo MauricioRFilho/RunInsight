@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Calendar, Trophy, History, Image as ImageIcon, Box } from 'lucide-react';
+import { X, Calendar, Trophy, History, Image as ImageIcon, Box, Flame } from 'lucide-react';
 import { TemplateType } from './SocialCard';
 
 interface SocialTemplateSelectorProps {
@@ -13,6 +13,7 @@ export const SocialTemplateSelector: React.FC<SocialTemplateSelectorProps> = ({ 
 
   const templates = [
     { id: 'weekly', name: 'Resumo da Semana', icon: Calendar, color: 'emerald' },
+    { id: 'streak', name: 'Minha Sequência', icon: Flame, color: 'rose' },
     { id: 'pr', name: 'Recordes Pessoais', icon: Trophy, color: 'indigo' },
     { id: 'tbt', name: 'Throwback (TBT)', icon: History, color: 'amber' },
   ];

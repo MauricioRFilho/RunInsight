@@ -19,6 +19,8 @@ model User {
   activities    Activity[]
   trainingPlans TrainingPlan[]
   achievements  Achievement[]
+  xp            Float          @default(0)
+  level         Int            @default(1)
   lastSyncedAt  DateTime?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt

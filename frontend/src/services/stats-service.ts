@@ -48,6 +48,21 @@ export class StatsService {
   }
 
   /**
+   * Helper to get all stats at once.
+   */
+  static async getUserStats(userId: string) {
+    const [yearly, records] = await Promise.all([
+      this.getYearlyStats(userId),
+      this.getPersonalRecords(userId),
+    ]);
+
+    return {
+      ...yearly,
+      ...records,
+    };
+  }
+
+  /**
    * Identifies Personal Records (Best Efforts) for standard distances.
    */
   static async getPersonalRecords(userId: string) {

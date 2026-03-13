@@ -29,32 +29,50 @@ export default function Dashboard() {
   const [isTransparent, setIsTransparent] = useState(false);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
 
-  const userId = session?.user?.id || session?.user?.email || 'default-user-id';
+  const userId = (session?.user as any)?.id || session?.user?.email || 'default-user-id';
 
   useEffect(() => {
     if (status === 'authenticated') {
       async function fetchData() {
         try {
+          const fetchWithCatch = async (promise: Promise<any>, setter: (data: any) => void, name: string) => {
+            try {
+              const data = await promise;
+              setter(data);
+              return data;
+            } catch (err) {
+              console.error(`[Dashboard] Failed to fetch ${name}:`, err);
+              return null;
+            }
+          };
+
           const [load, gamif, trainingPlans, adherence, coach, yearlyStats, recentActivities, personalRecords] = await Promise.all([
-            api.getLoadAnalysis(userId),
-            api.getGamificationData(userId),
-            api.getPlans(userId),
-            api.getAdherenceScore(userId),
-            api.getCoachFeedback(userId),
-            api.getYearlyStats(userId),
-            api.getActivities(userId),
-            api.getPersonalRecords(userId)
+            fetchWithCatch(api.getLoadAnalysis(userId), setLoadData, 'Load'),
+            fetchWithCatch(api.getGamificationData(userId), setGamificationData, 'Gamification'),
+            fetchWithCatch(api.getPlans(userId), setPlans, 'Plans'),
+            fetchWithCatch(api.getAdherenceScore(userId), (d) => setAdherenceScore(d.score), 'Adherence'),
+            fetchWithCatch(api.getCoachFeedback(userId), (d) => setCoachFeedback(d.feedback), 'Coach'),
+            fetchWithCatch(api.getYearlyStats(userId), setStats, 'Stats'),
+            fetchWithCatch(api.getActivities(userId), setActivities, 'Activities'),
+            fetchWithCatch(api.getPersonalRecords(userId), setRecords, 'Records')
           ]);
-          setLoadData(load);
-          setGamificationData(gamif);
-          setPlans(trainingPlans);
-          setAdherenceScore(adherence.score);
-          setCoachFeedback(coach.feedback);
-          setStats(yearlyStats);
-          setActivities(recentActivities);
-          setRecords(personalRecords);
+          
+          // Se não houver atividades, tenta sincronizar uma vez automaticamente
+          if (recentActivities && recentActivities.length === 0) {
+             console.log('[Dashboard] No activities found, triggering auto-sync...');
+             const syncResult = await fetchWithCatch(api.syncActivities(userId), () => {}, 'Sync');
+             
+             if (syncResult && syncResult.count > 0) {
+                // Recarregar os dados após sync com sucesso
+                await Promise.all([
+                  fetchWithCatch(api.getYearlyStats(userId), setStats, 'Stats'),
+                  fetchWithCatch(api.getActivities(userId), setActivities, 'Activities'),
+                  fetchWithCatch(api.getPersonalRecords(userId), setRecords, 'Records')
+                ]);
+             }
+          }
         } catch (err) {
-          console.error(err);
+          console.error('[Dashboard Fetch Error]', err);
         } finally {
           setLoading(false);
         }
@@ -184,11 +202,22 @@ export default function Dashboard() {
             <span className="text-emerald-500 font-bold mb-1"><Activity size={14} /></span>
           </div>
         </div>
-        <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl group hover:border-indigo-500/50 transition-all">
-          <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-1">Rank Atual</p>
-          <div className="flex items-end gap-1">
-            <span className="text-2xl font-black text-white">Elite</span>
-            <span className="text-indigo-500 font-bold mb-1"><Trophy size={14} /></span>
+        <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl group hover:border-indigo-500/50 transition-all flex flex-col justify-between">
+          <div className="flex justify-between items-start mb-1">
+            <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Nível {gamificationData?.level || 1}</p>
+            <span className="text-indigo-500 font-bold"><Trophy size={14} /></span>
+          </div>
+          <div>
+            <div className="flex items-end gap-1 mb-2">
+              <span className="text-2xl font-black text-white">{Math.round(gamificationData?.xp || 0)}</span>
+              <span className="text-[10px] font-bold text-indigo-500 mb-1">XP</span>
+            </div>
+            <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+              <div 
+                className="bg-indigo-500 h-full transition-all duration-1000" 
+                style={{ width: `${gamificationData?.progress || 0}%` }}
+              ></div>
+            </div>
           </div>
         </div>
       </section>
@@ -225,8 +254,8 @@ export default function Dashboard() {
       </section>
 
       {/* Coach Insights */}
-      <section className="mb-8">
-        <div className="bg-gradient-to-br from-indigo-900/20 to-slate-900 border border-indigo-500/20 p-6 rounded-3xl relative overflow-hidden group">
+      <section className="mb-8 relative group">
+        <div className="bg-gradient-to-br from-indigo-900/20 to-slate-900 border border-indigo-500/20 p-6 rounded-3xl relative overflow-hidden transition-all duration-500 grayscale opacity-40 blur-[2px]">
           <div className="absolute -right-4 -top-4 bg-indigo-500/10 w-24 h-24 rounded-full blur-3xl group-hover:bg-indigo-500/20 transition-all"></div>
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
             <div className="bg-indigo-600 shadow-xl shadow-indigo-600/30 h-14 w-14 rounded-2xl flex items-center justify-center shrink-0">
@@ -240,6 +269,13 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+        
+        {/* Overlay Em Breve */}
+        <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+          <div className="bg-slate-950/80 border border-white/10 px-6 py-2 rounded-full backdrop-blur-md shadow-2xl transform -rotate-2">
+            <span className="text-white font-black text-xs tracking-[0.3em] uppercase">Disponível em breve</span>
+          </div>
+        </div>
       </section>
 
       {/* Upcoming Plans & Load Chart */}
@@ -251,33 +287,43 @@ export default function Dashboard() {
             isOverloaded={loadData?.isOverloaded || false} 
           />
         </div>
-        <div>
-          <div className="flex justify-between items-center mb-4">
+        <div className="relative group">
+          <div className="flex justify-between items-center mb-4 opacity-40 grayscale blur-[1px]">
             <h3 className="font-bold text-slate-300 flex items-center gap-2">
               <Calendar size={18} className="text-indigo-400" /> Próximos Treinos
             </h3>
             <button 
-              onClick={() => setIsGoalModalOpen(true)}
-              className="text-[10px] bg-slate-900 border border-slate-800 hover:border-indigo-500/50 text-indigo-400 px-2 py-1 rounded-md font-bold flex items-center gap-1 transition-all"
+              disabled
+              className="text-[10px] bg-slate-900 border border-slate-800 text-slate-600 px-2 py-1 rounded-md font-bold flex items-center gap-1 cursor-not-allowed"
             >
               <Plus size={10} /> ADICIONAR META
             </button>
           </div>
-          {plans.length > 0 ? (
-            plans.slice(0, 3).map((plan: any) => (
-              <PlanCard 
-                key={plan.id}
-                type={plan.type}
-                distance={plan.targetDistance}
-                scheduledFor={plan.scheduledFor}
-                isCompleted={plan.isCompleted}
-              />
-            ))
-          ) : (
-            <div className="p-8 border border-dashed border-slate-800 rounded-2xl flex flex-col items-center justify-center text-center">
-              <p className="text-sm text-slate-500 italic">Nenhum treino planejado.</p>
+          
+          <div className="opacity-40 grayscale blur-[2px] pointer-events-none">
+            {plans.length > 0 ? (
+              plans.slice(0, 3).map((plan: any) => (
+                <PlanCard 
+                  key={plan.id}
+                  type={plan.type}
+                  distance={plan.targetDistance}
+                  scheduledFor={plan.scheduledFor}
+                  isCompleted={plan.isCompleted}
+                />
+              ))
+            ) : (
+              <div className="p-8 border border-dashed border-slate-800 rounded-2xl flex flex-col items-center justify-center text-center">
+                <p className="text-sm text-slate-500 italic">Nenhum treino planejado.</p>
+              </div>
+            )}
+          </div>
+
+          {/* Overlay Em Breve */}
+          <div className="absolute inset-x-0 top-12 bottom-0 flex items-center justify-center z-10 pointer-events-none">
+            <div className="bg-slate-950/80 border border-white/10 px-4 py-1.5 rounded-full backdrop-blur-md shadow-2xl transform rotate-1">
+              <span className="text-white font-black text-[10px] tracking-[0.2em] uppercase">Em desenvolvimento</span>
             </div>
-          )}
+          </div>
         </div>
       </section>
 
@@ -384,6 +430,7 @@ export default function Dashboard() {
               data={{
                 weeklyVolume: loadData?.currentWeekVolume || 0,
                 hasFlashBadge: !loadData?.isOverloaded,
+                streak: gamificationData?.streak || 0,
                 records: records,
                 activity: activities.length > 0 ? {
                   name: activities[0].name,

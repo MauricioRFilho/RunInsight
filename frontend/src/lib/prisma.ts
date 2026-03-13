@@ -1,4 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { PrismaClient } from '@prisma/client';
+import { Pool } from 'pg';
+import { PrismaPg } from '@prisma/adapter-pg';
 
 const createMock = (errorInfo?: string): any => {
   return new Proxy(() => {}, {
@@ -29,9 +32,20 @@ const prismaClientSingleton = () => {
   try {
     // Para Prisma 7, geralmente basta instanciar se o DATABASE_URL estiver no ambiente
     // O erro 500 generalizado pode vir de uma falha de conexão aqui.
-    return new PrismaClient();
+    const connectionString = process.env.DATABASE_URL;
+    if (!connectionString) {
+      throw new Error('DATABASE_URL is not defined');
+    }
+
+    const pool = new Pool({ connectionString });
+    const adapter = new PrismaPg(pool);
+    const client = new PrismaClient({ adapter });
+
+    console.log('[Prisma] Cliente instanciado com sucesso usando adaptador PrismaPg.');
+    return client;
   } catch (error: any) {
     console.error('[Prisma] Erro crítico ao instanciar PrismaClient:', error.message);
+    console.error('[Prisma] Stack trace:', error.stack);
     return createMock(error.message);
   }
 };

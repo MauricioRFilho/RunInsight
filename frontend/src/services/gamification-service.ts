@@ -2,70 +2,109 @@ import prisma from '@/lib/prisma';
 
 export class GamificationService {
   /**
-   * Updates user streaks and awards achievements.
+   * Updates user XP, level, and awards achievements.
    */
   static async checkAndAward(userId: string) {
     const activities = await prisma.activity.findMany({
       where: { userId, type: 'Run' },
       orderBy: { startDate: 'desc' },
-      take: 30,
+      take: 10,
     });
 
     if (activities.length === 0) return;
 
-    // Check for "First Run" achievement
-    const firstRunAchievement = await prisma.achievement.findFirst({
-      where: { userId, type: 'First Run' },
+    // 1. Calculate and update XP/Level for the last activities if not already done
+    await this.refreshUserXP(userId);
+
+    // 2. Check for Achievements based on REAL data
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { achievements: true },
     });
 
-    if (!firstRunAchievement) {
+    if (!user) return;
+
+    // Achievement: First Real Run
+    if (!user.achievements.some((a: any) => a.type === 'First Run')) {
       await prisma.achievement.create({
         data: {
           userId,
           type: 'First Run',
-          name: 'Primeira Corrida!',
-          description: 'Você completou sua primeira atividade sincronizada.',
+          name: 'Primeira Corrida Real!',
+          description: 'Você sincronizou sua primeira atividade oficial do Strava.',
         },
       });
     }
 
-    // Check for "Weekly Volume" (e.g., 50km in a week)
-    // This could be more complex, but for MVP let's do a simple count
-    if (activities.length >= 5) {
-      const fiveRunsAchievement = await prisma.achievement.findFirst({
-        where: { userId, type: 'High Five' },
+    // Achievement: Speed Demon (Pace < 4:30 min/km for 5km+)
+    // 4:30 min/km = 270 seconds/km
+    const fastRun = activities.find((a: any) => a.distance >= 5000 && (a.movingTime / (a.distance / 1000)) < 270);
+    if (fastRun && !user.achievements.some((a: any) => a.type === 'Speed Demon')) {
+      await prisma.achievement.create({
+        data: {
+          userId,
+          type: 'Speed Demon',
+          name: 'Demônio da Velocidade',
+          description: 'Completou 5km com pace abaixo de 4:30 min/km.',
+        },
       });
-
-      if (!fiveRunsAchievement) {
-        await prisma.achievement.create({
-          data: {
-            userId,
-            type: 'High Five',
-            name: 'High Five!',
-            description: 'Você completou 5 corridas no RunInsight.',
-          },
-        });
-      }
     }
 
-    // Streak logic (Refined)
-    const streak = await this.calculateStreak(userId);
-    if (streak >= 3) {
-      const flashAchievement = await prisma.achievement.findFirst({
-        where: { userId, type: 'Flash' },
+    // Achievement: Endurance King (Distance > 15km)
+    const longRun = activities.find((a: any) => a.distance >= 15000);
+    if (longRun && !user.achievements.some((a: any) => a.type === 'Endurance King')) {
+      await prisma.achievement.create({
+        data: {
+          userId,
+          type: 'Endurance King',
+          name: 'Rei da Resistência',
+          description: 'Completou um treino longo de mais de 15km.',
+        },
       });
-
-      if (!flashAchievement) {
-        await prisma.achievement.create({
-          data: {
-            userId,
-            type: 'Flash',
-            name: 'Pace Seguro (Flash)',
-            description: 'Você correu pelo menos 3km por 3 dias seguidos!',
-          },
-        });
-      }
     }
+  }
+
+  /**
+   * Recalculates total XP and level based on all activities.
+   */
+  static async refreshUserXP(userId: string) {
+    const activities = await prisma.activity.findMany({
+      where: { userId, type: 'Run' },
+    });
+
+    let totalXP = 0;
+    for (const activity of activities) {
+      totalXP += this.calculateActivityXP(activity);
+    }
+
+    const level = this.calculateLevelFromXP(totalXP);
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { xp: totalXP, level },
+    });
+  }
+
+  /**
+   * XP Formula: (Moving Time in minutes) * (Intensity Factor)
+   * Intensity Factor = (Average Speed / 3.0) -> Base pace of 5:33 min/km
+   */
+  static calculateActivityXP(activity: any): number {
+    const minutes = activity.movingTime / 60;
+    // Base intensity for a 5:30 pace (~3.0 m/s)
+    const intensityFactor = Math.max(0.5, activity.averageSpeed / 3.0);
+    
+    return Math.round(minutes * intensityFactor * 10); // Scale by 10 for better numbers
+  }
+
+  /**
+   * Level Formula: Based on cumulative XP
+   */
+  static calculateLevelFromXP(xp: number): number {
+    // Level 1: 0 XP
+    // Level 2: 100 XP
+    // Level 3: 400 XP... Level = floor(sqrt(XP / 100)) + 1
+    return Math.floor(Math.sqrt(xp / 100)) + 1;
   }
 
   static async calculateStreak(userId: string): Promise<number> {
@@ -78,7 +117,7 @@ export class GamificationService {
     if (activities.length === 0) return 0;
 
     let streak = 0;
-    let currentDate = new Date();
+    const currentDate = new Date();
     currentDate.setHours(0, 0, 0, 0);
 
     // Get unique dates for activities
@@ -115,14 +154,27 @@ export class GamificationService {
   }
 
   static async getGamificationData(userId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { xp: true, level: true },
+    });
+
     const streak = await this.calculateStreak(userId);
     const achievements = await prisma.achievement.findMany({
       where: { userId },
       orderBy: { dateEarned: 'desc' },
     });
 
+    const currentLevelXP = Math.pow(user?.level ?? 1 - 1, 2) * 100;
+    const nextLevelXP = Math.pow(user?.level ?? 1, 2) * 100;
+    const progress = user ? ((user.xp - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100 : 0;
+
     return {
       streak,
+      xp: user?.xp ?? 0,
+      level: user?.level ?? 1,
+      progress: Math.min(100, Math.max(0, progress)),
+      nextLevelXP,
       achievements,
     };
   }

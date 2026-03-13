@@ -1,7 +1,7 @@
 import React from 'react';
 import { Award, Calendar, Flame, TrendingUp, Trophy } from 'lucide-react';
 
-export type TemplateType = 'weekly' | 'pr' | 'tbt';
+export type TemplateType = 'weekly' | 'pr' | 'tbt' | 'streak';
 
 interface SocialCardProps {
   template: TemplateType;
@@ -9,6 +9,7 @@ interface SocialCardProps {
   data: {
     weeklyVolume?: number;
     hasFlashBadge?: boolean;
+    streak?: number;
     records?: {
       best5k: string;
       best10k: string;
@@ -31,7 +32,9 @@ const SocialCard: React.FC<SocialCardProps> = ({ template, userName, data, trans
       ? 'bg-linear-to-br from-indigo-600 to-blue-700' 
       : template === 'tbt'
         ? 'bg-linear-to-br from-emerald-500 to-teal-700'
-        : 'bg-linear-to-br from-orange-500 to-red-600';
+        : template === 'streak'
+          ? 'bg-linear-to-br from-rose-500 to-orange-600'
+          : 'bg-linear-to-br from-orange-500 to-red-600';
 
   return (
     <div 
@@ -85,6 +88,20 @@ const SocialCard: React.FC<SocialCardProps> = ({ template, userName, data, trans
               <p className="text-[10px] font-black uppercase opacity-60 mb-1">Meia Maratona</p>
               <p className="text-3xl font-black">{data.records?.best21k || 'N/A'}</p>
             </div>
+          </div>
+        )}
+
+        {template === 'streak' && (
+          <div className="text-center">
+             <div className="inline-block p-6 bg-white/20 rounded-full mb-6 animate-pulse">
+                <Flame size={64} className="text-orange-400 fill-orange-400" />
+             </div>
+             <div className="text-8xl font-black tabular-nums tracking-tighter mb-2">
+               {data.streak || 0}
+             </div>
+             <p className="text-xl font-bold uppercase tracking-widest text-white/90">
+               Dias em Sequência
+             </p>
           </div>
         )}
 

@@ -6,24 +6,30 @@ export class ActivityService {
    * Processes raw activities from Strava and saves them to the database.
    */
   static async saveStravaActivities(userId: string, stravaActivities: any[]) {
-    const activitiesData = stravaActivities.map((activity) => ({
-      userId,
-      stravaId: activity.id.toString(),
-      name: activity.name,
-      distance: activity.distance,
-      movingTime: activity.moving_time,
-      elapsedTime: activity.elapsed_time,
-      totalElevationGain: activity.total_elevation_gain,
-      type: activity.type === 'Run' ? 'Run' : activity.type,
-      startDate: new Date(activity.start_date),
-      averageSpeed: activity.average_speed,
-      maxSpeed: activity.max_speed,
-      averageHeartRate: activity.average_heartrate,
-      maxHeartRate: activity.max_heartrate,
-      polyline: activity.map?.summary_polyline,
-      startLatLng: activity.start_latlng ? activity.start_latlng.join(',') : null,
-      endLatLng: activity.end_latlng ? activity.end_latlng.join(',') : null,
-    }));
+    const activitiesData = stravaActivities
+      .filter(activity => {
+        const isValid = activity.id && activity.distance >= 0 && activity.moving_time >= 0;
+        if (!isValid) console.warn(`[ActivityService] Skipping invalid activities data:`, activity.id);
+        return isValid;
+      })
+      .map((activity) => ({
+        userId,
+        stravaId: activity.id.toString(),
+        name: activity.name || 'Atividade sem nome',
+        distance: activity.distance,
+        movingTime: activity.moving_time,
+        elapsedTime: activity.elapsed_time || activity.moving_time,
+        totalElevationGain: activity.total_elevation_gain || 0,
+        type: activity.type === 'Run' ? 'Run' : activity.type,
+        startDate: new Date(activity.start_date || new Date()),
+        averageSpeed: activity.average_speed || 0,
+        maxSpeed: activity.max_speed || 0,
+        averageHeartRate: activity.average_heartrate || null,
+        maxHeartRate: activity.max_heartrate || null,
+        polyline: activity.map?.summary_polyline || null,
+        startLatLng: activity.start_latlng ? activity.start_latlng.join(',') : null,
+        endLatLng: activity.end_latlng ? activity.end_latlng.join(',') : null,
+      }));
 
     // Using createMany or individual creates depending on DB support and duplicates.
     // For MVP, we'll do individual creates to handle existing stravaIds gracefully or use connectOrCreate.

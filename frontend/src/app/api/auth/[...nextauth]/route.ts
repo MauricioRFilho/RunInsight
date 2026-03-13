@@ -61,54 +61,77 @@ const authHandler = NextAuth({
     async signIn({ user, account }: any) {
       if (account?.provider === 'strava') {
         const stravaId = account.providerAccountId;
+        console.log(`[NextAuth] STRAVA DATA RECEIVED:`, {
+          id: stravaId,
+          name: user.name,
+          email: user.email,
+          profile: user.image,
+          access_token: account.access_token ? 'EXISTS' : 'MISSING',
+        });
         console.log(`[NextAuth] Strava sign-in attempt for StravaID: ${stravaId} (Email: ${user.email || 'not provided'})`);
         
         try {
-          // Use StravaID as primary lookup for Strava provider
-          const dbUser = await prisma.user.upsert({
-            where: { stravaId: stravaId },
-            update: {
-              accessToken: account.access_token,
-              refreshToken: account.refresh_token,
-              expiresAt: account.expires_at,
-              name: user.name || undefined, // Somente atualiza se houver nome
-              email: user.email || undefined,
-            },
-            create: {
-              stravaId: stravaId,
-              email: user.email || null,
-              accessToken: account.access_token,
-              refreshToken: account.refresh_token,
-              expiresAt: account.expires_at,
-              name: user.name || 'Strava User',
-            },
+          // 1. Tentar encontrar por Strava ID
+          let dbUser = await prisma.user.findUnique({
+            where: { stravaId: stravaId }
           });
-          
-          user.id = dbUser.id;
-          user.stravaId = dbUser.stravaId;
-          console.log(`[NextAuth] Success! StravaID ${stravaId} mapped to DB ID: ${dbUser.id}`);
-        } catch (error: any) {
-          console.error(`[NextAuth Error] Upsert failed for StravaID ${stravaId}:`, error.message);
-          
-          // Fallback if upsert by stravaId fails (e.g. email conflict)
-          if (user.email) {
-            try {
-              console.log(`[NextAuth] Retrying mapping via email: ${user.email}`);
-              const dbUserEmail = await prisma.user.update({
-                where: { email: user.email },
+
+          if (dbUser) {
+            // Atualizar tokens
+            dbUser = await prisma.user.update({
+              where: { id: dbUser.id },
+              data: {
+                accessToken: account.access_token,
+                refreshToken: account.refresh_token,
+                expiresAt: account.expires_at,
+                name: user.name || dbUser.name,
+              }
+            });
+            console.log(`[NextAuth] Updated existing Strava user: ${dbUser.id}`);
+          } else if (user.email) {
+            // 2. Se não encontrou por Strava ID, tentar por E-mail
+            dbUser = await prisma.user.findUnique({
+              where: { email: user.email }
+            });
+
+            if (dbUser) {
+              // Vincular Strava ID ao usuário existente por e-mail
+              dbUser = await prisma.user.update({
+                where: { id: dbUser.id },
                 data: {
                   stravaId: stravaId,
                   accessToken: account.access_token,
                   refreshToken: account.refresh_token,
                   expiresAt: account.expires_at,
+                  name: dbUser.name || user.name,
                 }
               });
-              user.id = dbUserEmail.id;
-              user.stravaId = dbUserEmail.stravaId;
-            } catch (e2: any) {
-              console.error(`[NextAuth Error] Email fallback also failed:`, e2.message);
+              console.log(`[NextAuth] Linked StravaID ${stravaId} to existing email user: ${dbUser.id}`);
             }
           }
+
+          // 3. Se ainda não tem usuário, criar novo
+          if (!dbUser) {
+            dbUser = await prisma.user.create({
+              data: {
+                stravaId: stravaId,
+                email: user.email || null,
+                accessToken: account.access_token,
+                refreshToken: account.refresh_token,
+                expiresAt: account.expires_at,
+                name: user.name || 'Strava User',
+              }
+            });
+            console.log(`[NextAuth] Created NEW Strava user: ${dbUser.id}`);
+          }
+          
+          user.id = dbUser.id;
+          user.stravaId = dbUser.stravaId;
+          console.log(`[NextAuth] Success! StravaID ${stravaId} mapped to DB ID: ${dbUser.id}`);
+        } catch (error: any) {
+          console.error(`[NextAuth Error] Database operation failed during Strava sign-in:`, error.message);
+          // Permitimos o login mesmo se der erro no log de banco (fallback para o ID do provider)
+          // mas o ideal é que esse bloco seja robusto o suficiente
         }
       }
       return true;
