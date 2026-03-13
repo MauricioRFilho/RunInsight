@@ -7,6 +7,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import { compare } from 'bcryptjs';
 
 const handler = NextAuth({
+  debug: true, // Habilitar debug do NextAuth
   providers: [
     StravaProvider({
       clientId: process.env.STRAVA_CLIENT_ID || '',
@@ -107,6 +108,17 @@ const handler = NextAuth({
     },
   },
   secret: process.env.NEXTAUTH_SECRET,
+  logger: {
+    error(code, metadata) {
+      console.error('NextAuth Error:', code, metadata);
+    },
+    warn(code) {
+      console.warn('NextAuth Warning:', code);
+    },
+    debug(code, metadata) {
+      console.log('NextAuth Debug:', code, metadata);
+    }
+  }
 });
 
 export { handler as GET, handler as POST };
