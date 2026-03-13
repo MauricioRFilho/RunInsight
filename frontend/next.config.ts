@@ -12,9 +12,6 @@ const nextConfig = {
   },
   // Force ignoring static optimization for all pages during build
   staticPageGenerationTimeout: 1000,
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
 };
 
 export default nextConfig;
