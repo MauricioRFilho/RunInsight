@@ -235,7 +235,7 @@ export default function Dashboard() {
             <div>
               <h3 className="text-indigo-400 font-bold text-xs uppercase tracking-[0.2em] mb-1">Insights do Treinador AI</h3>
               <p className="text-slate-200 text-lg leading-relaxed font-medium">
-                "{coachFeedback || 'Analisando seus últimos treinos para gerar recomendações personalizadas...'}"
+                &quot;{coachFeedback || 'Analisando seus últimos treinos para gerar recomendações personalizadas...'}&quot;
               </p>
             </div>
           </div>
