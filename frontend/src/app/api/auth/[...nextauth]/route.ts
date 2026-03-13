@@ -6,8 +6,8 @@ import prisma from '@/lib/prisma';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { compare } from 'bcryptjs';
 
-const handler = NextAuth({
-  debug: true, // Habilitar debug do NextAuth
+const authHandler = NextAuth({
+  debug: true,
   providers: [
     StravaProvider({
       clientId: process.env.STRAVA_CLIENT_ID || '',
@@ -59,10 +59,8 @@ const handler = NextAuth({
   ],
   callbacks: {
     async signIn({ user, account }: any) {
-      // Logic to conditionally skip DB call during build if Prisma is mocked
       if (account?.provider === 'strava' && user.email) {
         try {
-          // If prisma is the mock proxy from lib/prisma.ts, this will be safe
           await prisma.user.upsert({
             where: { email: user.email },
             update: {
@@ -122,5 +120,21 @@ const handler = NextAuth({
     }
   }
 });
+
+const handler = async (req: any, res: any) => {
+  try {
+    return await authHandler(req, res);
+  } catch (error: any) {
+    console.error('CRITICAL NEXTAUTH ERROR:', error);
+    return new Response(JSON.stringify({ 
+      error: 'Internal Server Error', 
+      message: error.message,
+      stack: error.stack 
+    }), { 
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+};
 
 export { handler as GET, handler as POST };
