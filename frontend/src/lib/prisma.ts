@@ -1,10 +1,14 @@
 import { PrismaClient } from '@prisma/client';
 
-const createMock = (): any => {
+const createMock = (errorInfo?: string): any => {
   return new Proxy(() => {}, {
     get: (_target, prop) => {
-      if (prop === 'then') return undefined; // Proteção contra Promises
-      return createMock();
+      if (prop === 'then') return undefined;
+      // Se tentarem acessar propriedades de dados (como .filter), vai estourar aqui com o erro real
+      if (typeof prop === 'string' && ['filter', 'map', 'reduce'].includes(prop)) {
+        throw new Error(`Prisma is running in MOCK mode due to initialization error: ${errorInfo}`);
+      }
+      return createMock(errorInfo);
     },
     apply: () => {
       return Promise.resolve(null);
@@ -14,22 +18,21 @@ const createMock = (): any => {
 
 const prismaClientSingleton = () => {
   if (process.env.NEXT_PHASE === 'phase-production-build') {
-    console.log('[Prisma] Ambientes de build/Vercel detectados. Ativando mock recursivo.');
-    return createMock() as PrismaClient;
+    return createMock('Build phase mock');
   }
   
   console.log('[Prisma] Inicializando cliente em runtime...');
+  if (!process.env.DATABASE_URL) {
+    console.error('[Prisma] DATABASE_URL não encontrada no ambiente!');
+  }
+
   try {
-    return new PrismaClient({
-      datasources: {
-        db: {
-          url: process.env.DATABASE_URL
-        }
-      }
-    });
-  } catch (error) {
-    console.error('[Prisma] Erro crítico ao instanciar PrismaClient:', error);
-    return createMock() as PrismaClient;
+    // Para Prisma 7, geralmente basta instanciar se o DATABASE_URL estiver no ambiente
+    // O erro 500 generalizado pode vir de uma falha de conexão aqui.
+    return new PrismaClient();
+  } catch (error: any) {
+    console.error('[Prisma] Erro crítico ao instanciar PrismaClient:', error.message);
+    return createMock(error.message);
   }
 };
 

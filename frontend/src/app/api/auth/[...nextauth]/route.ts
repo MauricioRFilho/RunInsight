@@ -61,7 +61,7 @@ const authHandler = NextAuth({
     async signIn({ user, account }: any) {
       if (account?.provider === 'strava' && user.email) {
         try {
-          await prisma.user.upsert({
+          const dbUser = await prisma.user.upsert({
             where: { email: user.email },
             update: {
               stravaId: account.providerAccountId,
@@ -79,8 +79,12 @@ const authHandler = NextAuth({
               name: user.name,
             },
           });
-        } catch (error) {
-          console.error('NextAuth: Error in signIn callback:', error);
+          // Garantir que o ID interno seja passado para o JWT/Session
+          user.id = dbUser.id;
+          user.stravaId = dbUser.stravaId;
+          console.log('[NextAuth] User mapped to DB ID:', user.id);
+        } catch (error: any) {
+          console.error('NextAuth: Error in signIn callback:', error.message);
         }
       }
       return true;
@@ -89,6 +93,7 @@ const authHandler = NextAuth({
       if (user) {
         token.id = user.id;
         token.stravaId = user.stravaId;
+        console.log('[NextAuth] JWT set token.id:', token.id);
       }
       if (account) {
         token.accessToken = account.access_token;
